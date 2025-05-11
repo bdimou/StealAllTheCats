@@ -7,6 +7,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 
 namespace DataAccessLayer.Repositories
 {
@@ -14,10 +15,12 @@ namespace DataAccessLayer.Repositories
     public class CatsRepository : ICatsRepository
     {
         private readonly ApplicationDbContext _dbContext;
+        private readonly ILogger<CatsRepository> _logger;
 
-        public CatsRepository(ApplicationDbContext dbContext)
+        public CatsRepository(ApplicationDbContext dbContext, ILogger<CatsRepository> logger)
         {
             _dbContext = dbContext;
+            _logger = logger;
         }
 
 
@@ -57,6 +60,8 @@ namespace DataAccessLayer.Repositories
             var existingTags = await _dbContext.Tags
                 .ToDictionaryAsync(t => t.Name.ToLower());
 
+            // Skipped cats counter
+            int skipped = 0;
             foreach (var cat in cats)
             {
                 var newCatTags = new List<CatTag>();
@@ -86,16 +91,27 @@ namespace DataAccessLayer.Repositories
                     });
                 }
 
+
                 // Overwrite CatTags to avoid modifying during iteration
                 cat.CatTags = newCatTags;
 
-                _dbContext.Cats.Add(cat); // Track the cat with linked tags
+                bool exists = await _dbContext.Cats.AnyAsync(c => c.ImageHash == cat.ImageHash);
+                if (!exists)
+                {
+                    _dbContext.Cats.Add(cat);
+                }
+                else
+                {
+                    _logger.LogInformation($"Skipped duplicate image for CatId={cat.CatId}, hash={cat.ImageHash}");
+                    skipped++;
+                }
             }
 
             await _dbContext.SaveChangesAsync();
+            _logger.LogInformation($"Saved {cats.Count - skipped} new cats. Skipped {skipped} duplicates.");
 
-            // Return the number of unique photos added to the database
-            return cats.Count(cat => cat.CatTags.Any());
+            // Return the number of unique cats added to the database
+            return (cats.Count - skipped);
         }
 
     }

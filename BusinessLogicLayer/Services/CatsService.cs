@@ -7,6 +7,7 @@ using Microsoft.Extensions.Logging;
 using AutoMapper;
 using Humanizer;
 using Microsoft.AspNetCore.Http.HttpResults;
+using static System.Net.Mime.MediaTypeNames;
 
 namespace BusinessLogicLayer.Services
 {
@@ -17,14 +18,16 @@ namespace BusinessLogicLayer.Services
         private readonly ICatsRepository _CatsRepository;
         private readonly ILogger<CatsService> _logger;
         private readonly IMapper _mapper;
+        private readonly IImageHashProvider _hashProvider;
 
-        public CatsService(CaasClient caasClient, PhotoClient photoClient, ILogger<CatsService> logger, ICatsRepository catsRepository, IMapper mapper)
+        public CatsService(CaasClient caasClient, PhotoClient photoClient, ILogger<CatsService> logger, ICatsRepository catsRepository, IMapper mapper, IImageHashProvider hashProvider)
         {
             _caasClient = caasClient;
             _photoClient = photoClient;
             _logger = logger;
             _CatsRepository = catsRepository;
             _mapper = mapper;
+            _hashProvider = hashProvider;
         }
 
         public async Task<int> FetchCatsAsync()
@@ -66,12 +69,23 @@ namespace BusinessLogicLayer.Services
                     tagRequests.Add(tempTagRequest);
                 }
 
+                // get the kitty image in bytes[]
+                var kittyImage = await _photoClient.DownloadImageAsync(kitty.Url);
+                if (kittyImage == null)
+                {
+                    _logger.LogWarning($"Failed to download image for kitty with ID: {kitty.Id}");
+                    continue; // Skip this kitty if the image download fails
+                }
+                // hash it for faster image comparison
+                var imageHash = _hashProvider.ComputeHash(kittyImage);
+
                 CatRequest catRequest = new CatRequest
                 {
                     CatId = kitty.Id,
                     Width = kitty.Width,
                     Height = kitty.Height,
-                    Image = await _photoClient.DownloadImageAsync(kitty.Url),
+                    Image = kittyImage,
+                    ImageHash = imageHash,
                     Created = DateTime.UtcNow,
                     tagRequests = tagRequests // Assign tagRequests during initialization
                 };

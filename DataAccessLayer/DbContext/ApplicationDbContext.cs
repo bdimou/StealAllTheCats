@@ -28,6 +28,11 @@ public class ApplicationDbContext : DbContext
             .WithMany(t => t.CatTags)
             .HasForeignKey(ct => ct.TagId);
 
+        // Add unique index on ImageHash
+        modelBuilder.Entity<Cat>()
+            .HasIndex(c => c.ImageHash)
+            .IsUnique();
+
         base.OnModelCreating(modelBuilder);
     }
 }

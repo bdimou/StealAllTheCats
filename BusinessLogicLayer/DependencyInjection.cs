@@ -30,6 +30,8 @@ namespace BusinessLogicLayer
 
             // Services
             services.AddScoped<ICatsService, CatsService>();
+            services.AddSingleton<IImageHashProvider, Sha256ImageHashProvider>();
+
 
             // HttpClient for CaasAPI
             services.AddHttpClient<CaasClient>(client =>
