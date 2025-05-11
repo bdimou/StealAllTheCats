@@ -12,7 +12,7 @@ namespace BusinessLogicLayer.DTO
      string CatId,
      int Width,
      int Height, 
-     byte[] Image,
+     byte[] Image, 
      string ImageHash,
      DateTime Created,
      ICollection<TagRequest> tagRequests)

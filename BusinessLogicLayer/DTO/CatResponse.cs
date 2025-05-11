@@ -11,7 +11,7 @@ namespace BusinessLogicLayer.DTO
      string CatId,
      int Width,
      int Height, 
-     byte[] Image,
+     byte[] Image, 
      DateTime Created)
     {
         public CatResponse() : this(default, default, default, default, default, default) 

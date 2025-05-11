@@ -33,7 +33,7 @@ namespace DataAccessLayer.Entities
         /// </summary>  
         public byte[] Image { get; set; }
 
-        /// <summary>
+        /// <summary>  
         /// Represents the hash of the image for quick comparison and storage efficiency.
         /// </summary>
         public string ImageHash { get; set; } 
