@@ -14,6 +14,8 @@ namespace BusinessLogicLayer.Validators
         public TagRequestValidator()
         {
             RuleFor(x => x.Name)
+                .NotEmpty().WithMessage("Tag name must not be empty.")
+                .NotNull().WithMessage("Tag name must not be null.")
                 .Must(BeAlpha).WithMessage("Tag name must only contain alphabetic characters.");
         }
 
