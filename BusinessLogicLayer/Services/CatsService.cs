@@ -1,6 +1,7 @@
 ﻿using BusinessLogicLayer.DTO;
 using BusinessLogicLayer.HttpClients;
 using BusinessLogicLayer.ServiceContracts;
+using BusinessLogicLayer.Validators;
 using DataAccessLayer.RepositoryContracts;
 using DataAccessLayer.Entities;
 using Microsoft.Extensions.Logging;
@@ -8,6 +9,8 @@ using AutoMapper;
 using Humanizer;
 using Microsoft.AspNetCore.Http.HttpResults;
 using static System.Net.Mime.MediaTypeNames;
+using FluentValidation;
+using Microsoft.Extensions.Caching.Memory;
 
 namespace BusinessLogicLayer.Services
 {
@@ -19,8 +22,21 @@ namespace BusinessLogicLayer.Services
         private readonly ILogger<CatsService> _logger;
         private readonly IMapper _mapper;
         private readonly IImageHashProvider _hashProvider;
+        private readonly IValidator<string> _idValidator;
+        private readonly IValidator<PaginationRequest> _paginationValidator;
+        private readonly IValidator<TagRequest> _tagRequestValidator;
+        private readonly IMemoryCache _cache;
 
-        public CatsService(CaasClient caasClient, PhotoClient photoClient, ILogger<CatsService> logger, ICatsRepository catsRepository, IMapper mapper, IImageHashProvider hashProvider)
+        public CatsService(CaasClient caasClient,
+            PhotoClient photoClient,
+            ILogger<CatsService> logger,
+            ICatsRepository catsRepository,
+            IMapper mapper,
+            IImageHashProvider hashProvider,
+            IValidator<string> idValidator,
+            IValidator<PaginationRequest> paginationValidator,
+            IValidator<TagRequest> tagRequestValidator,
+            IMemoryCache cache)
         {
             _caasClient = caasClient;
             _photoClient = photoClient;
@@ -28,10 +44,15 @@ namespace BusinessLogicLayer.Services
             _CatsRepository = catsRepository;
             _mapper = mapper;
             _hashProvider = hashProvider;
+            _idValidator = idValidator;
+            _paginationValidator = paginationValidator;
+            _tagRequestValidator = tagRequestValidator;
+            _cache = cache;
         }
 
         public async Task<int> FetchCatsAsync()
         {
+            _logger.LogInformation("Fetching cats from CaaS API...");
             // Call the CaasClient to fetch them kitties
             List<CaasResponse>? kitties = await _caasClient.FetchKitties();
 
@@ -43,7 +64,6 @@ namespace BusinessLogicLayer.Services
 
             // Log the number of kitties fetched
             _logger.LogInformation($"Fetched {kitties.Count} kitties from the API.");
-
 
             // Start deserializing the response to create our DTOs
             List<Cat> cats = new List<Cat>();
@@ -64,7 +84,7 @@ namespace BusinessLogicLayer.Services
                     TagRequest tempTagRequest = new TagRequest
                     {
                         Name = tag,
-                        Created = DateTime.UtcNow 
+                        Created = DateTime.UtcNow
                     };
                     tagRequests.Add(tempTagRequest);
                 }
@@ -95,6 +115,9 @@ namespace BusinessLogicLayer.Services
                 cats.Add(cat);
 
             }
+
+            _logger.LogInformation($"Mapped {cats.Count} kitties to Cat entities.");
+
             // Save kitty to the database, care for distinct photos
             var distinctPhotos = await _CatsRepository.SaveCats(cats);
 
@@ -102,19 +125,150 @@ namespace BusinessLogicLayer.Services
 
         }
 
-        public Task<CatResponse?> GetCatByCondition(Func<CatResponse, bool> condition)
+        public async Task<PaginatedList<CatResponse>> GetCatsPaginated(string page, string pageSize)
         {
-            throw new NotImplementedException();
+            _logger.LogInformation("Fetching paginated cats -no tag- from the repository...");
+
+            // Create Pagination object and validate
+            var paginationRequest = new PaginationRequest() { PageIndex = page, PageSize = pageSize };
+            var validationResult = await _paginationValidator.ValidateAsync(paginationRequest);
+            if (!validationResult.IsValid)
+            {
+                _logger.LogWarning("Invalid pagination request: {Errors}", validationResult.Errors);
+                throw new ValidationException(validationResult.Errors);
+            }
+
+            //Try to get the paginated list from the cache
+            if (_cache.TryGetValue($"CatsPage{page}_Size{pageSize}", out PaginatedList<CatResponse> cachedCats))
+            {
+                _logger.LogInformation($"Returning cached cats for page: {page} and page size: {pageSize}");
+                return cachedCats;
+            }
+
+            // Change page and pageSize to int
+            int pageInt = int.TryParse(page, out int pageNumber) ? pageNumber : 1;
+            int pageSizeInt = int.TryParse(pageSize, out int pageSizeNumber) ? pageSizeNumber : 10;
+
+            // Fetch paginated cats and total count from the repository  
+            var (cats, totalCount) = await _CatsRepository.GetCatsPaginated(pageInt, pageSizeInt);
+
+            _logger.LogInformation($"Fetched {totalCount} cats from the repository for page: {page} and page size: {pageSize}");
+
+            // Map the list of Cat entities to CatResponse DTOs  
+            var catResponses = cats.Select(cat => _mapper.Map<CatResponse>(cat)).ToList();
+
+            // Craete a new PaginatedList of CatResponse  
+            PaginatedList<CatResponse> paginatedListResponse = new PaginatedList<CatResponse>(catResponses, pageInt, (int)Math.Ceiling((double)totalCount / pageSizeInt));
+
+            // Cache the paginated list
+            var cacheEntryOptions = new MemoryCacheEntryOptions()
+                .SetSlidingExpiration(TimeSpan.FromMinutes(5))
+                .SetAbsoluteExpiration(TimeSpan.FromHours(1));
+
+            _cache.Set($"CatsPage{page}_Size{pageSize}", paginatedListResponse, cacheEntryOptions);
+
+            _logger.LogInformation($"Caching paginated cats for page: {page} and page size: {pageSize}");
+
+            // Return the paginated list
+            return paginatedListResponse;
+
         }
 
-        public Task<IEnumerable<CatResponse>> GetCatsPaginated(int page, int pageSize)
+        public async Task<PaginatedList<CatResponse>> GetCatsPaginatedByTag(string page, string pageSize, string tag)
         {
-            throw new NotImplementedException();
+            _logger.LogInformation($"Fetching paginated cats with tag: {tag} from the repository...");
+
+            // Create Pagination object and validate
+            var paginationRequest = new PaginationRequest() { PageIndex = page, PageSize = pageSize };
+            var validationResult = await _paginationValidator.ValidateAsync(paginationRequest);
+            if (!validationResult.IsValid)
+            {
+                _logger.LogWarning("Invalid pagination request: {Errors}", validationResult.Errors);
+                throw new ValidationException(validationResult.Errors);
+            }
+            // Validate the tag format
+            var tagValidationResult = _tagRequestValidator.Validate(new TagRequest { Name = tag });
+            if (!tagValidationResult.IsValid)
+            {
+                _logger.LogWarning("Invalid tag request: {Errors}", tagValidationResult.Errors);
+                throw new ValidationException(tagValidationResult.Errors);
+            }
+
+            //Try to get the paginated list from the cache minding the tag
+            if (_cache.TryGetValue($"CatsPage{page}_Size{pageSize}_Tag{tag}", out PaginatedList<CatResponse> cachedCats))
+            {
+                _logger.LogInformation($"Returning cached cats for page: {page} and page size: {pageSize} and tag: {tag}");
+                return cachedCats;
+            }
+
+            // Change page and pageSize to int
+            int pageInt = int.TryParse(page, out int pageNumber) ? pageNumber : 1;
+            int pageSizeInt = int.TryParse(pageSize, out int pageSizeNumber) ? pageSizeNumber : 10;
+
+            // Fetch paginated cats and total count from the repository  
+            var (cats, totalCount) = await _CatsRepository.GetCatsPaginatedByTag(pageInt, pageSizeInt, tag);
+
+            _logger.LogInformation($"Fetched {totalCount} cats from the repository for page: {page} and page size: {pageSize} and tag: {tag}");
+
+            // Map the list of Cat entities to CatResponse DTOs  
+            var catResponses = cats.Select(cat => _mapper.Map<CatResponse>(cat)).ToList();
+
+            // Create a new PaginatedList of CatResponse  
+            PaginatedList<CatResponse> paginatedListResponse = new PaginatedList<CatResponse>(catResponses, pageInt, (int)Math.Ceiling((double)totalCount / pageSizeInt));
+
+            // Cache the paginated list
+            var cacheEntryOptions = new MemoryCacheEntryOptions()
+                .SetSlidingExpiration(TimeSpan.FromMinutes(5))
+                .SetAbsoluteExpiration(TimeSpan.FromHours(1));
+            _cache.Set($"CatsPage{page}_Size{pageSize}_Tag{tag}", paginatedListResponse, cacheEntryOptions);
+
+            _logger.LogInformation($"Caching paginated cats for page: {page} and page size: {pageSize} and tag: {tag}");
+
+            // Return the paginated list
+            return paginatedListResponse;
         }
 
-        public Task<IEnumerable<CatResponse>> GetCatsPaginatedByTag(int page, int pageSize, string tag)
+        public async Task<CatResponse?> GetCatById(string id)
         {
-            throw new NotImplementedException();
+            _logger.LogInformation($"Fetching cat with ID: {id} from the repository...");
+
+            // Validate the ID format
+            var idValidationResult = await _idValidator.ValidateAsync(id);
+            if (!idValidationResult.IsValid)
+            {
+                _logger.LogWarning("Invalid ID format: {Errors}", idValidationResult.Errors);
+                throw new ValidationException(idValidationResult.Errors);
+            }
+
+            // Try to get the cat from the cache
+            if (_cache.TryGetValue($"CatId{id}", out CatResponse cachedCat))
+            {
+                _logger.LogInformation($"Returning cached cat with ID: {id}");
+                return cachedCat;
+            }
+
+            // Get cat by ID from the repository
+            Cat? cat = await _CatsRepository.GetCatById(id);
+            
+            // Convert to response DTO
+            CatResponse? catResponse = cat != null ? _mapper.Map<CatResponse>(cat) : null;
+
+            // Cache the cat response
+            if (catResponse != null)
+            {
+                var cacheEntryOptions = new MemoryCacheEntryOptions()
+                    .SetSlidingExpiration(TimeSpan.FromMinutes(5))
+                    .SetAbsoluteExpiration(TimeSpan.FromHours(1));
+                _cache.Set($"CatId{id}", catResponse, cacheEntryOptions);
+                _logger.LogInformation($"Caching cat with ID: {id}");
+
+                return catResponse;
+            }
+            else
+            {
+                _logger.LogWarning($"Cat with ID: {id} not found in the repository.");
+                return null;
+            }
         }
     }
 }

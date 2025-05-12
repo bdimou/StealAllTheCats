@@ -2,11 +2,6 @@
 using DataAccessLayer.RepositoryContracts;
 using DataAccessLayer.Context;
 using Microsoft.EntityFrameworkCore;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 
 namespace DataAccessLayer.Repositories
@@ -24,34 +19,43 @@ namespace DataAccessLayer.Repositories
         }
 
 
-        public Task<Cat?> GetCatById(string id)
+        public async Task<Cat?> GetCatById(string id)
         {
-            throw new NotImplementedException();
-        }
-    
-        public Task FetchCatsAsync()
-        {
-            throw new NotImplementedException();
+            var query = await _dbContext.Cats
+                .Include(c => c.CatTags) 
+                .ThenInclude(ct => ct.Tag) 
+                .FirstOrDefaultAsync(c => c.Id == int.Parse(id));
+
+            return query;
         }
 
-        public Task<IEnumerable<Tag>> GetTagsAsync()
+
+        public async Task<(List<Cat>, int)> GetCatsPaginated(int page, int pageSize)
         {
-            throw new NotImplementedException();
+            var query = _dbContext.Cats
+                .Include(c => c.CatTags) 
+                .ThenInclude(ct => ct.Tag) 
+                .OrderBy(c => c.Id);
+
+            var totalCount = await query.CountAsync();
+            var items = await query.Skip((page - 1) * pageSize).Take(pageSize).ToListAsync();
+
+            return (items, totalCount);
         }
 
-        public Task<Cat?> GetCatByCondition(Func<Cat, bool> condition)
-        {
-            throw new NotImplementedException();
-        }
 
-        public Task<IEnumerable<Cat>> GetCatsPaginated(int page, int pageSize)
+        public async Task<(List<Cat>, int)> GetCatsPaginatedByTag(int page, int pageSize, string tag)
         {
-            throw new NotImplementedException();
-        }
+            var query = _dbContext.Cats
+                .Include(c => c.CatTags) 
+                .ThenInclude(ct => ct.Tag) 
+                .Where(c => c.CatTags.Any(ct => ct.Tag.Name == tag))
+                .OrderBy(c => c.Id);
 
-        public Task<IEnumerable<Cat>> GetCatsPaginatedByTag(int page, int pageSize, string tag)
-        {
-            throw new NotImplementedException();
+            var totalCount = await query.CountAsync();
+            var items = await query.Skip((page - 1) * pageSize).Take(pageSize).ToListAsync();
+
+            return (items, totalCount);
         }
 
         public async Task<int> SaveCats(List<Cat> cats)
@@ -59,6 +63,8 @@ namespace DataAccessLayer.Repositories
             // Get all existing tags into a case-insensitive dictionary
             var existingTags = await _dbContext.Tags
                 .ToDictionaryAsync(t => t.Name.ToLower());
+
+            _logger.LogInformation($"Found {existingTags.Count} existing tags in the database.");
 
             // Skipped cats counter
             int skipped = 0;
@@ -79,6 +85,7 @@ namespace DataAccessLayer.Repositories
                             Name = tagName,
                             Created = DateTime.UtcNow
                         };
+                        _logger.LogInformation($"Adding new tag: {tag.Name}");
                         _dbContext.Tags.Add(tag);
                         existingTags[tagKey] = tag; // Add for future use
                     }

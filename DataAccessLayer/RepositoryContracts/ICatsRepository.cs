@@ -20,7 +20,7 @@ namespace DataAccessLayer.RepositoryContracts
         /// <param name="page">The page number to retrieve.</param>
         /// <param name="pageSize">The number of items per page.</param>
         /// <returns>A task representing the asynchronous operation, containing a list of cats.</returns>
-        Task<IEnumerable<Cat>> GetCatsPaginated(int page, int pageSize);
+        Task<(List<Cat>, int)>  GetCatsPaginated(int page, int pageSize);
         /// <summary>
         /// Gets a paginated list of cats filtered by tag from the database.
         /// </summary>
@@ -28,12 +28,12 @@ namespace DataAccessLayer.RepositoryContracts
         /// <param name="pageSize">The number of items per page.</param>
         /// <param name="tag">The tag to filter by.</param>
         /// <returns>A task representing the asynchronous operation, containing a list of cats.</returns>
-        Task<IEnumerable<Cat>> GetCatsPaginatedByTag(int page, int pageSize, string tag);
+        Task<(List<Cat>, int)> GetCatsPaginatedByTag(int page, int pageSize, string tag);
         /// <summary>
         /// Gets a cat by its ID from the database.
         /// </summary>
         /// <param name="id">The ID of the cat to retrieve.</param>
         /// <returns>A task representing the asynchronous operation, containing the cat if found; otherwise, null.</returns>
-        Task<Cat?> GetCatByCondition(Func<Cat, bool> condition);
+        Task<Cat?> GetCatById(string id);
     }
 }
