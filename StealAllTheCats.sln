@@ -1,5 +1,4 @@
-﻿
-Microsoft Visual Studio Solution File, Format Version 12.00
+﻿Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.12.35514.174
 MinimumVisualStudioVersion = 10.0.40219.1
@@ -9,9 +8,16 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DataAccessLayer", "DataAcce
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BusinessLogicLayer", "BusinessLogicLayer\BusinessLogicLayer.csproj", "{6CDDEEF9-0362-4BA5-A285-4ADE80442148}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "API.Tests", "API.Tests\API.Tests.csproj", "{F28B85AF-7358-4178-8659-3FCA3F97D95C}"
-EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BusinessLogicLayer.Tests", "BusinessLogicLayer.Tests\BusinessLogicLayer.Tests.csproj", "{293D5C0E-3ADE-445A-B205-19193B91FC5E}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DataAccessLayer.Tests", "DataAccessLayer.Tests\DataAccessLayer.Tests.csproj", "{7B8D5C0E-3ADE-445A-B205-19193B91FC5F}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{06608B05-17B8-4B3E-B035-AE71F85F5984}"
+	ProjectSection(SolutionItems) = preProject
+		.dockerignore = .dockerignore
+		docker-compose.override.yml = docker-compose.override.yml
+		docker-compose.yml = docker-compose.yml
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -31,14 +37,14 @@ Global
 		{6CDDEEF9-0362-4BA5-A285-4ADE80442148}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{6CDDEEF9-0362-4BA5-A285-4ADE80442148}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{6CDDEEF9-0362-4BA5-A285-4ADE80442148}.Release|Any CPU.Build.0 = Release|Any CPU
-		{F28B85AF-7358-4178-8659-3FCA3F97D95C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{F28B85AF-7358-4178-8659-3FCA3F97D95C}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{F28B85AF-7358-4178-8659-3FCA3F97D95C}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{F28B85AF-7358-4178-8659-3FCA3F97D95C}.Release|Any CPU.Build.0 = Release|Any CPU
 		{293D5C0E-3ADE-445A-B205-19193B91FC5E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{293D5C0E-3ADE-445A-B205-19193B91FC5E}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{293D5C0E-3ADE-445A-B205-19193B91FC5E}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{293D5C0E-3ADE-445A-B205-19193B91FC5E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{7B8D5C0E-3ADE-445A-B205-19193B91FC5F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7B8D5C0E-3ADE-445A-B205-19193B91FC5F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7B8D5C0E-3ADE-445A-B205-19193B91FC5F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7B8D5C0E-3ADE-445A-B205-19193B91FC5F}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

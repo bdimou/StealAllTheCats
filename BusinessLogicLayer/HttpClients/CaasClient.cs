@@ -1,5 +1,4 @@
-﻿
-using BusinessLogicLayer.DTO;
+﻿using BusinessLogicLayer.DTO;
 using System.Net.Http.Json;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Logging;
@@ -7,11 +6,15 @@ using System.Text.Json;
 using Microsoft.Identity.Client;
 using Microsoft.Extensions.Configuration;
 
-
-
 namespace BusinessLogicLayer.HttpClients
 {
-    public class CaasClient
+    public interface ICaasClient
+    {
+        Task<List<CaasResponse>?> FetchKitties();
+        Task<byte[]?> DownloadImageAsync(string url);
+    }
+
+    public class CaasClient : ICaasClient
     {
         private readonly HttpClient _httpClient;
         private readonly ILogger<CaasClient> _logger;
@@ -55,6 +58,14 @@ namespace BusinessLogicLayer.HttpClients
             });
 
             return caasResponse;
+        }
+
+        public async Task<byte[]?> DownloadImageAsync(string url)
+        {
+            var response = await _httpClient.GetAsync(url);
+            if (!response.IsSuccessStatusCode)
+                return null;
+            return await response.Content.ReadAsByteArrayAsync();
         }
     }
 }

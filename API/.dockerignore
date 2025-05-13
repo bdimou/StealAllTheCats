@@ -1,0 +1,47 @@
+# Ignore build outputs
+**/bin/
+**/obj/
+
+# Ignore test projects entirely
+API.Tests/
+BusinessLogicLayer.Tests/
+*.Tests/
+
+# Ignore user-specific files
+*.user
+*.suo
+*.dbmdl
+*.jfm
+
+# Ignore IDE and tooling files
+.vs/
+.vscode/
+.idea/
+*.classpath
+*.project
+*.settings
+*.toolstarget
+
+# Ignore Docker/compose override configs if present
+docker-compose.override.yml
+docker-compose.debug.yml
+secrets.dev.yaml
+values.dev.yaml
+azds.yaml
+charts/
+
+# Ignore common frontend clutter
+node_modules/
+npm-debug.log
+
+# Ignore git metadata (safe unless your app needs it)
+.git/
+.gitignore
+!.git/HEAD
+!.git/config
+!.git/packed-refs
+!.git/refs/heads/**
+
+# General project docs
+LICENSE
+README.md

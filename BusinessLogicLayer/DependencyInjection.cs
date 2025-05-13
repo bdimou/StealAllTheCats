@@ -36,13 +36,10 @@ namespace BusinessLogicLayer
 
 
             // HttpClient for CaasAPI
-            services.AddHttpClient<CaasClient>(client =>
+            services.AddHttpClient<ICaasClient, CaasClient>(client =>
             {
                 client.BaseAddress = new Uri($"https://api.thecatapi.com/v1/");
             });
-
-            // HttpClient for jpeg url calls
-            services.AddHttpClient<PhotoClient>();
 
             return services;
         }

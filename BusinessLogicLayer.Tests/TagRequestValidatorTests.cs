@@ -3,6 +3,8 @@ using FluentValidation.TestHelper;
 using BusinessLogicLayer.DTO;
 using BusinessLogicLayer.Validators;
 
+
+namespace BusinessLogicLayer.Tests;
 public class TagRequestValidatorTests
 {
     private readonly TagRequestValidator _validator = new();

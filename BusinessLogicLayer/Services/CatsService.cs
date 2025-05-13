@@ -16,8 +16,7 @@ namespace BusinessLogicLayer.Services
 {
     public class CatsService : ICatsService
     {
-        private readonly CaasClient _caasClient;
-        private readonly PhotoClient _photoClient;
+        private readonly ICaasClient _caasClient;
         private readonly ICatsRepository _CatsRepository;
         private readonly ILogger<CatsService> _logger;
         private readonly IMapper _mapper;
@@ -27,8 +26,7 @@ namespace BusinessLogicLayer.Services
         private readonly IValidator<TagRequest> _tagRequestValidator;
         private readonly IMemoryCache _cache;
 
-        public CatsService(CaasClient caasClient,
-            PhotoClient photoClient,
+        public CatsService(ICaasClient caasClient,
             ILogger<CatsService> logger,
             ICatsRepository catsRepository,
             IMapper mapper,
@@ -39,7 +37,6 @@ namespace BusinessLogicLayer.Services
             IMemoryCache cache)
         {
             _caasClient = caasClient;
-            _photoClient = photoClient;
             _logger = logger;
             _CatsRepository = catsRepository;
             _mapper = mapper;
@@ -73,10 +70,18 @@ namespace BusinessLogicLayer.Services
                 List<TagRequest> tagRequests = new List<TagRequest>();
 
                 // Extract tags from the breeds, split on delimiter(,)
-                List<string> tags = kitty.Breeds
-                   .SelectMany(b => b.Temperament.Split(',', StringSplitOptions.RemoveEmptyEntries))
-                   .Select(t => t.Trim())
-                   .ToList();
+                List<string> tags = new List<string>();
+                if (kitty.Breeds != null)
+                {
+                    foreach (var breed in kitty.Breeds)
+                    {
+                        if (!string.IsNullOrEmpty(breed?.Temperament))
+                        {
+                            tags.AddRange(breed.Temperament.Split(',', StringSplitOptions.RemoveEmptyEntries)
+                                .Select(t => t.Trim()));
+                        }
+                    }
+                }
 
                 // For each tag, create TagRequest object and add to the list
                 foreach (string tag in tags)
@@ -90,7 +95,7 @@ namespace BusinessLogicLayer.Services
                 }
 
                 // get the kitty image in bytes[]
-                var kittyImage = await _photoClient.DownloadImageAsync(kitty.Url);
+                var kittyImage = await _caasClient.DownloadImageAsync(kitty.Url);
                 if (kittyImage == null)
                 {
                     _logger.LogWarning($"Failed to download image for kitty with ID: {kitty.Id}");

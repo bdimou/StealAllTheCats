@@ -3,6 +3,9 @@ using Xunit;
 using BusinessLogicLayer.Validators;
 using BusinessLogicLayer.DTO;
 
+
+namespace BusinessLogicLayer.Tests;
+
 public class PaginationRequestValidatorTests
 {
     private readonly PaginationRequestValidator _validator = new();

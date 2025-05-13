@@ -2,6 +2,8 @@
 using FluentValidation.TestHelper;
 using BusinessLogicLayer.Validators;
 
+namespace BusinessLogicLayer.Tests;
+
 public class IdValidatorTests
 {
     private readonly IdValidator _validator = new();
