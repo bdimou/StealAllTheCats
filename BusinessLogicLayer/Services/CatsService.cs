@@ -94,22 +94,21 @@ namespace BusinessLogicLayer.Services
                     tagRequests.Add(tempTagRequest);
                 }
 
-                // get the kitty image in bytes[]
-                var kittyImage = await _caasClient.DownloadImageAsync(kitty.Url);
-                if (kittyImage == null)
+                // Download the image as bytes for hashing
+                var kittyImageBytes = await _caasClient.DownloadImageAsync(kitty.Url);
+                if (kittyImageBytes == null)
                 {
                     _logger.LogWarning($"Failed to download image for kitty with ID: {kitty.Id}");
                     continue; // Skip this kitty if the image download fails
                 }
-                // hash it for faster image comparison
-                var imageHash = _hashProvider.ComputeHash(kittyImage);
+                var imageHash = _hashProvider.ComputeHash(kittyImageBytes);
 
                 CatRequest catRequest = new CatRequest
                 {
                     CatId = kitty.Id,
                     Width = kitty.Width,
                     Height = kitty.Height,
-                    Image = kittyImage,
+                    Image = kitty.Url,
                     ImageHash = imageHash,
                     Created = DateTime.UtcNow,
                     tagRequests = tagRequests // Assign tagRequests during initialization

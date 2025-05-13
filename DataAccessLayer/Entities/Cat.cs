@@ -1,11 +1,13 @@
 ﻿using static System.Formats.Asn1.AsnWriter;
 using System.ComponentModel;
+using Microsoft.EntityFrameworkCore;
 
 namespace DataAccessLayer.Entities
 {
     /// <summary>  
     /// Represents a Cat entity with properties for database storage and CaaS API integration.  
     /// </summary>  
+    [Index(nameof(ImageHash), IsUnique = true)]
     public class Cat
     {
         /// <summary>  
@@ -29,9 +31,9 @@ namespace DataAccessLayer.Entities
         public int Height { get; set; }
 
         /// <summary>  
-        /// Contains the solution for storing the image.  
+        /// Stores the image URL from the CaaS API.  
         /// </summary>  
-        public byte[] Image { get; set; }
+        public string Image { get; set; }
 
         /// <summary>  
         /// Represents the hash of the image for quick comparison and storage efficiency.

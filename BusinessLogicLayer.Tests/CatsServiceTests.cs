@@ -59,7 +59,7 @@ namespace BusinessLogicLayer.Tests
             // Arrange
             var catId = "1";
             var cat = new Cat { Id = 1, CatId = "cat1" };
-            var catResponse = new CatResponse(1, "cat1", 100, 100, new byte[0], new List<TagResponse>(), DateTime.UtcNow);
+            var catResponse = new CatResponse(1, "cat1", 100, 100, "http://example.com/cat1.jpg", new List<TagResponse>(), DateTime.UtcNow);
 
             _mockIdValidator.Setup(x => x.ValidateAsync(catId, It.IsAny<CancellationToken>()))
                 .ReturnsAsync(new ValidationResult());
@@ -107,7 +107,7 @@ namespace BusinessLogicLayer.Tests
                 new Cat { Id = 1, CatId = "cat1" },
                 new Cat { Id = 2, CatId = "cat2" }
             };
-            var catResponses = cats.Select(c => new CatResponse(c.Id, c.CatId, 100, 100, new byte[0], new List<TagResponse>(), DateTime.UtcNow)).ToList();
+            var catResponses = cats.Select(c => new CatResponse(c.Id, c.CatId, 100, 100, "http://example.com/cat.jpg", new List<TagResponse>(), DateTime.UtcNow)).ToList();
 
             _mockPaginationValidator.Setup(x => x.ValidateAsync(It.IsAny<PaginationRequest>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(new ValidationResult());
@@ -139,7 +139,7 @@ namespace BusinessLogicLayer.Tests
             {
                 new Cat { Id = 1, CatId = "cat1" }
             };
-            var catResponses = cats.Select(c => new CatResponse(c.Id, c.CatId, 100, 100, new byte[0], new List<TagResponse>(), DateTime.UtcNow)).ToList();
+            var catResponses = cats.Select(c => new CatResponse(c.Id, c.CatId, 100, 100, "http://example.com/cat.jpg", new List<TagResponse>(), DateTime.UtcNow)).ToList();
 
             _mockPaginationValidator.Setup(x => x.ValidateAsync(It.IsAny<PaginationRequest>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(new ValidationResult());
@@ -188,7 +188,7 @@ namespace BusinessLogicLayer.Tests
                 CatId = "cat1",
                 Width = 100,
                 Height = 100,
-                Image = new byte[0],
+                Image = "http://example.com/cat1.jpg",
                 ImageHash = "hash1",
                 Created = DateTime.UtcNow
             };
@@ -199,7 +199,7 @@ namespace BusinessLogicLayer.Tests
             _mockCaasClient.Setup(x => x.DownloadImageAsync(It.IsAny<string>()))
                 .ReturnsAsync(new byte[] { 1, 2, 3 });
 
-            _mockHashProvider.Setup(x => x.ComputeHash(It.IsAny<byte[]>()))
+            _mockHashProvider.Setup(x => x.ComputeHash(new byte[] { 1, 2, 3 }))
                 .Returns("hash1");
 
             _mockMapper.Setup(x => x.Map<Cat>(It.IsAny<CatRequest>()))
@@ -222,7 +222,7 @@ namespace BusinessLogicLayer.Tests
             // Arrange
             var catId = "1";
             var cat = new Cat { Id = 1, CatId = "cat1" };
-            var catResponse = new CatResponse(1, "cat1", 100, 100, new byte[0], new List<TagResponse>(), DateTime.UtcNow);
+            var catResponse = new CatResponse(1, "cat1", 100, 100, "http://example.com/cat1.jpg", new List<TagResponse>(), DateTime.UtcNow);
 
             _mockIdValidator.Setup(x => x.ValidateAsync(catId, It.IsAny<CancellationToken>()))
                 .ReturnsAsync(new ValidationResult());
@@ -317,7 +317,7 @@ namespace BusinessLogicLayer.Tests
             {
                 new Cat { Id = 1, CatId = "cat1" }
             };
-            var catResponses = cats.Select(c => new CatResponse(c.Id, c.CatId, 100, 100, new byte[0], new List<TagResponse>(), DateTime.UtcNow)).ToList();
+            var catResponses = cats.Select(c => new CatResponse(c.Id, c.CatId, 100, 100, "http://example.com/cat.jpg", new List<TagResponse>(), DateTime.UtcNow)).ToList();
 
             _mockPaginationValidator.Setup(x => x.ValidateAsync(It.IsAny<PaginationRequest>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(new ValidationResult());
@@ -354,7 +354,7 @@ namespace BusinessLogicLayer.Tests
             {
                 new Cat { Id = 1, CatId = "cat1" }
             };
-            var catResponses = cats.Select(c => new CatResponse(c.Id, c.CatId, 100, 100, new byte[0], new List<TagResponse>(), DateTime.UtcNow)).ToList();
+            var catResponses = cats.Select(c => new CatResponse(c.Id, c.CatId, 100, 100, "http://example.com/cat.jpg", new List<TagResponse>(), DateTime.UtcNow)).ToList();
 
             _mockPaginationValidator.Setup(x => x.ValidateAsync(It.IsAny<PaginationRequest>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(new ValidationResult());
@@ -401,7 +401,7 @@ namespace BusinessLogicLayer.Tests
                 CatId = "cat1",
                 Width = 100,
                 Height = 100,
-                Image = new byte[0],
+                Image = "http://example.com/cat1.jpg",
                 ImageHash = "existing_hash",
                 Created = DateTime.UtcNow
             };
@@ -412,7 +412,7 @@ namespace BusinessLogicLayer.Tests
             _mockCaasClient.Setup(x => x.DownloadImageAsync(It.IsAny<string>()))
                 .ReturnsAsync(new byte[] { 1, 2, 3 });
 
-            _mockHashProvider.Setup(x => x.ComputeHash(It.IsAny<byte[]>()))
+            _mockHashProvider.Setup(x => x.ComputeHash(new byte[] { 1, 2, 3 }))
                 .Returns("existing_hash");
 
             _mockMapper.Setup(x => x.Map<Cat>(It.IsAny<CatRequest>()))

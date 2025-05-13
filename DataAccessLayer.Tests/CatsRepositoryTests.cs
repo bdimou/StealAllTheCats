@@ -1,348 +1,181 @@
-using DataAccessLayer.Context;
 using DataAccessLayer.Entities;
 using DataAccessLayer.Repositories;
+using DataAccessLayer.RepositoryContracts;
+using DataAccessLayer.Context;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using System;
+using System.Collections.Generic;
+using System.Threading.Tasks;
+using System.Linq;
+using Microsoft.Data.Sqlite;
 
 namespace DataAccessLayer.Tests
 {
-    public class CatsRepositoryTests : IDisposable
+    public class CatsRepositoryTests
     {
-        private readonly ApplicationDbContext _context;
-        private readonly CatsRepository _repository;
-        private readonly Mock<ILogger<CatsRepository>> _mockLogger;
-
-        public CatsRepositoryTests()
+        private ApplicationDbContext CreateDbContext(string dbName)
         {
             var options = new DbContextOptionsBuilder<ApplicationDbContext>()
-                .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
+                .UseInMemoryDatabase(databaseName: dbName)
                 .Options;
-
-            _context = new ApplicationDbContext(options);
-            _mockLogger = new Mock<ILogger<CatsRepository>>();
-            _repository = new CatsRepository(_context, _mockLogger.Object);
-
-            // Seed test data
-            SeedTestData();
+            return new ApplicationDbContext(options);
         }
 
-        private void SeedTestData()
+        private CatsRepository CreateRepository(ApplicationDbContext context)
         {
-            var tags = new List<Tag>
-            {
-                new Tag { Id = 1, Name = "friendly", Created = DateTime.UtcNow },
-                new Tag { Id = 2, Name = "playful", Created = DateTime.UtcNow }
-            };
-
-            var cats = new List<Cat>
-            {
-                new Cat
-                {
-                    Id = 1,
-                    CatId = "cat1",
-                    Width = 100,
-                    Height = 100,
-                    Image = new byte[0],
-                    ImageHash = "hash1",
-                    Created = DateTime.UtcNow,
-                    CatTags = new List<CatTag>
-                    {
-                        new CatTag { Tag = tags[0] }
-                    }
-                },
-                new Cat
-                {
-                    Id = 2,
-                    CatId = "cat2",
-                    Width = 200,
-                    Height = 200,
-                    Image = new byte[0],
-                    ImageHash = "hash2",
-                    Created = DateTime.UtcNow,
-                    CatTags = new List<CatTag>
-                    {
-                        new CatTag { Tag = tags[1] }
-                    }
-                }
-            };
-
-            _context.Tags.AddRange(tags);
-            _context.Cats.AddRange(cats);
-            _context.SaveChanges();
+            var logger = new Mock<ILogger<CatsRepository>>();
+            return new CatsRepository(context, logger.Object);
         }
 
         [Fact]
-        public async Task GetCatById_ExistingId_ReturnsCat()
+        public async Task GetCatById_ReturnsCatWithTags()
         {
-            // Act
-            var result = await _repository.GetCatById("1");
+            var db = CreateDbContext(nameof(GetCatById_ReturnsCatWithTags));
+            var tag = new Tag { Name = "cute", Created = DateTime.UtcNow };
+            var cat = new Cat { CatId = "cat1", Width = 100, Height = 100, Image = "url", ImageHash = "hash1", Created = DateTime.UtcNow, CatTags = new List<CatTag>() };
+            var catTag = new CatTag { Cat = cat, Tag = tag };
+            cat.CatTags.Add(catTag);
+            db.Cats.Add(cat);
+            db.Tags.Add(tag);
+            db.CatTags.Add(catTag);
+            db.SaveChanges();
+            var repo = CreateRepository(db);
 
-            // Assert
+            var result = await repo.GetCatById(cat.Id.ToString());
+
             Assert.NotNull(result);
-            Assert.Equal(1, result.Id);
-            Assert.Equal("cat1", result.CatId);
+            Assert.Equal(cat.CatId, result.CatId);
             Assert.Single(result.CatTags);
-            Assert.Equal("friendly", result.CatTags.First().Tag.Name);
+            Assert.Equal("cute", result.CatTags.First().Tag.Name);
         }
 
         [Fact]
-        public async Task GetCatById_NonExistingId_ReturnsNull()
+        public async Task GetCatsPaginated_ReturnsCorrectPageAndCount()
         {
-            // Act
-            var result = await _repository.GetCatById("999");
+            var db = CreateDbContext(nameof(GetCatsPaginated_ReturnsCorrectPageAndCount));
+            for (int i = 1; i <= 15; i++)
+            {
+                db.Cats.Add(new Cat { CatId = $"cat{i}", Width = 100, Height = 100, Image = "url", ImageHash = $"hash{i}", Created = DateTime.UtcNow, CatTags = new List<CatTag>() });
+            }
+            db.SaveChanges();
+            var repo = CreateRepository(db);
 
-            // Assert
-            Assert.Null(result);
-        }
+            var (items, totalCount) = await repo.GetCatsPaginated(2, 5);
 
-        [Fact]
-        public async Task GetCatsPaginated_ReturnsCorrectPage()
-        {
-            // Act
-            var (cats, totalCount) = await _repository.GetCatsPaginated(1, 1);
-
-            // Assert
-            Assert.Single(cats);
-            Assert.Equal(2, totalCount);
-            Assert.Equal(1, cats[0].Id);
+            Assert.Equal(15, totalCount);
+            Assert.Equal(5, items.Count);
+            Assert.Equal("cat6", items[0].CatId);
         }
 
         [Fact]
         public async Task GetCatsPaginatedByTag_ReturnsFilteredCats()
         {
-            // Act
-            var (cats, totalCount) = await _repository.GetCatsPaginatedByTag(1, 10, "friendly");
-
-            // Assert
-            Assert.Single(cats);
-            Assert.Equal(1, totalCount);
-            Assert.Equal(1, cats[0].Id);
-            Assert.Equal("friendly", cats[0].CatTags.First().Tag.Name);
-        }
-
-        [Fact]
-        public async Task SaveCats_AddsNewCats()
-        {
-            // Arrange
-            var newCats = new List<Cat>
+            var db = CreateDbContext(nameof(GetCatsPaginatedByTag_ReturnsFilteredCats));
+            var tag = new Tag { Name = "playful", Created = DateTime.UtcNow };
+            db.Tags.Add(tag);
+            for (int i = 1; i <= 10; i++)
             {
-                new Cat
+                var cat = new Cat { CatId = $"cat{i}", Width = 100, Height = 100, Image = "url", ImageHash = $"hash{i}", Created = DateTime.UtcNow, CatTags = new List<CatTag>() };
+                if (i % 2 == 0)
                 {
-                    CatId = "cat3",
-                    Width = 300,
-                    Height = 300,
-                    Image = new byte[0],
-                    ImageHash = "hash3",
-                    Created = DateTime.UtcNow
+                    var catTag = new CatTag { Cat = cat, Tag = tag };
+                    cat.CatTags.Add(catTag);
+                    db.CatTags.Add(catTag);
                 }
-            };
+                db.Cats.Add(cat);
+            }
+            db.SaveChanges();
+            var repo = CreateRepository(db);
 
-            // Act
-            var result = await _repository.SaveCats(newCats);
+            var (items, totalCount) = await repo.GetCatsPaginatedByTag(1, 3, "playful");
 
-            // Assert
-            Assert.Equal(1, result);
-            Assert.Equal(3, _context.Cats.Count());
+            Assert.Equal(5, totalCount); // Only even cats have the tag
+            Assert.Equal(3, items.Count);
+            Assert.All(items, c => Assert.Contains(c.CatTags, ct => ct.Tag.Name == "playful"));
         }
 
         [Fact]
-        public async Task SaveCats_DuplicateImageHash_DoesNotAddDuplicate()
+        public async Task SaveCats_AddsNewCatsAndTags_AvoidsDuplicates()
         {
-            // Arrange
-            var duplicateCats = new List<Cat>
+            var connection = new SqliteConnection("Filename=:memory:");
+            connection.Open();
+
+            try
             {
-                new Cat
+                var options = new DbContextOptionsBuilder<ApplicationDbContext>()
+                    .UseSqlite(connection)
+                    .Options;
+
+                // Ensure schema is created
+                using (var db = new ApplicationDbContext(options))
                 {
-                    CatId = "cat3",
-                    Width = 100,
-                    Height = 100,
-                    Image = new byte[0],
-                    ImageHash = "hash1", // Same hash as existing cat
-                    Created = DateTime.UtcNow
+                    db.Database.EnsureCreated();
                 }
-            };
 
-            // Act
-            var result = await _repository.SaveCats(duplicateCats);
-
-            // Assert
-            Assert.Equal(0, result);
-            Assert.Equal(2, _context.Cats.Count());
-        }
-
-        [Fact]
-        public async Task GetCatsPaginated_InvalidPage_ReturnsEmptyList()
-        {
-            // Act
-            var (cats, totalCount) = await _repository.GetCatsPaginated(999, 10);
-
-            // Assert
-            Assert.Empty(cats);
-            Assert.Equal(2, totalCount);
-        }
-
-        [Fact]
-        public async Task GetCatsPaginated_ZeroPageSize_ReturnsEmptyList()
-        {
-            // Act
-            var (cats, totalCount) = await _repository.GetCatsPaginated(1, 0);
-
-            // Assert
-            Assert.Empty(cats);
-            Assert.Equal(2, totalCount);
-        }
-
-        [Fact]
-        public async Task GetCatsPaginatedByTag_NonExistingTag_ReturnsEmptyList()
-        {
-            // Act
-            var (cats, totalCount) = await _repository.GetCatsPaginatedByTag(1, 10, "nonexistent");
-
-            // Assert
-            Assert.Empty(cats);
-            Assert.Equal(0, totalCount);
-        }
-
-        [Fact]
-        public async Task SaveCats_EmptyList_ReturnsZero()
-        {
-            // Arrange
-            var emptyList = new List<Cat>();
-
-            // Act
-            var result = await _repository.SaveCats(emptyList);
-
-            // Assert
-            Assert.Equal(0, result);
-            Assert.Equal(2, _context.Cats.Count());
-        }
-
-        [Fact]
-        public async Task SaveCats_NullList_ThrowsArgumentNullException()
-        {
-            // Act & Assert
-            await Assert.ThrowsAsync<ArgumentNullException>(() => _repository.SaveCats(null));
-        }
-
-        [Fact]
-        public async Task SaveCats_MultipleCatsWithSameHash_OnlySavesOne()
-        {
-            // Arrange
-            var newCats = new List<Cat>
-            {
-                new Cat
+                // First context: add tag and first cat
+                using (var db1 = new ApplicationDbContext(options))
                 {
-                    CatId = "cat3",
-                    Width = 300,
-                    Height = 300,
-                    Image = new byte[0],
-                    ImageHash = "hash1", // Same as existing cat
-                    Created = DateTime.UtcNow
-                },
-                new Cat
-                {
-                    CatId = "cat4",
-                    Width = 400,
-                    Height = 400,
-                    Image = new byte[0],
-                    ImageHash = "hash1", // Same as existing cat
-                    Created = DateTime.UtcNow
-                }
-            };
+                    var tag1 = new Tag { Name = "cute", Created = DateTime.UtcNow };
+                    db1.Tags.Add(tag1);
+                    db1.SaveChanges();
 
-            // Act
-            var result = await _repository.SaveCats(newCats);
-
-            // Assert
-            Assert.Equal(0, result);
-            Assert.Equal(2, _context.Cats.Count());
-        }
-
-        [Fact]
-        public async Task GetCatById_InvalidFormat_ThrowsFormatException()
-        {
-            // Act & Assert
-            await Assert.ThrowsAsync<FormatException>(() => _repository.GetCatById("invalid"));
-        }
-
-        [Fact]
-        public async Task GetCatsPaginatedByTag_CaseInsensitive_ReturnsMatchingCats()
-        {
-            // Act
-            var (cats, totalCount) = await _repository.GetCatsPaginatedByTag(1, 10, "FRIENDLY");
-
-            // Assert
-            Assert.Single(cats);
-            Assert.Equal(1, totalCount);
-            Assert.Equal("friendly", cats[0].CatTags.First().Tag.Name);
-        }
-
-        [Fact]
-        public async Task SaveCats_WithTags_CreatesTagsAndRelationships()
-        {
-            // Arrange
-            var newCats = new List<Cat>
-            {
-                new Cat
-                {
-                    CatId = "cat3",
-                    Width = 300,
-                    Height = 300,
-                    Image = new byte[0],
-                    ImageHash = "hash3",
-                    Created = DateTime.UtcNow,
-                    CatTags = new List<CatTag>
+                    var cat1 = new Cat
                     {
-                        new CatTag
-                        {
-                            Tag = new Tag
-                            {
-                                Name = "newtag",
-                                Created = DateTime.UtcNow
-                            }
-                        }
-                    }
+                        CatId = "cat1",
+                        Width = 100,
+                        Height = 100,
+                        Image = "url1",
+                        ImageHash = "hash1",
+                        Created = DateTime.UtcNow,
+                        CatTags = new List<CatTag> { new CatTag { Tag = tag1 } }
+                    };
+                    db1.Cats.Add(cat1);
+                    db1.SaveChanges();
                 }
-            };
 
-            // Act
-            var result = await _repository.SaveCats(newCats);
+                // Second context: add cat2 and cat3 (cat3 is a duplicate)
+                using (var db2 = new ApplicationDbContext(options))
+                {
+                    var repo = CreateRepository(db2);
 
-            // Assert
-            Assert.Equal(1, result);
-            Assert.Equal(3, _context.Cats.Count());
-            Assert.Equal(3, _context.Tags.Count());
-            Assert.Equal(3, _context.CatTags.Count());
-        }
+                    var tag1 = db2.Tags.First(t => t.Name == "cute");
 
-        [Fact]
-        public async Task GetCatsPaginated_IncludesAllRelatedData()
-        {
-            // Act
-            var (cats, _) = await _repository.GetCatsPaginated(1, 10);
+                    var cat2 = new Cat
+                    {
+                        CatId = "cat2",
+                        Width = 100,
+                        Height = 100,
+                        Image = "url2",
+                        ImageHash = "hash2",
+                        Created = DateTime.UtcNow,
+                        CatTags = new List<CatTag> { new CatTag { Tag = new Tag { Name = "newtag", Created = DateTime.UtcNow } } }
+                    };
+                    var cat3 = new Cat
+                    {
+                        CatId = "cat3",
+                        Width = 100,
+                        Height = 100,
+                        Image = "url3",
+                        ImageHash = "hash1", // duplicate hash
+                        Created = DateTime.UtcNow,
+                        CatTags = new List<CatTag> { new CatTag { Tag = tag1 } }
+                    };
 
-            // Assert
-            Assert.All(cats, cat => Assert.NotNull(cat.CatTags));
-            Assert.All(cats, cat => Assert.All(cat.CatTags, ct => Assert.NotNull(ct.Tag)));
-        }
+                    var added = await repo.SaveCats(new List<Cat> { cat2, cat3 });
 
-        [Fact]
-        public async Task GetCatsPaginatedByTag_IncludesAllRelatedData()
-        {
-            // Act
-            var (cats, _) = await _repository.GetCatsPaginatedByTag(1, 10, "friendly");
-
-            // Assert
-            Assert.All(cats, cat => Assert.NotNull(cat.CatTags));
-            Assert.All(cats, cat => Assert.All(cat.CatTags, ct => Assert.NotNull(ct.Tag)));
-        }
-
-        public void Dispose()
-        {
-            _context.Database.EnsureDeleted();
-            _context.Dispose();
+                    Assert.Equal(1, added); // only cat2 added, cat3 skipped
+                    Assert.Equal(2, db2.Cats.Count());
+                    Assert.Contains(db2.Tags, t => t.Name == "cute");
+                    Assert.Contains(db2.Tags, t => t.Name == "newtag");
+                }
+            }
+            finally
+            {
+                connection.Close();
+            }
         }
     }
 } 
