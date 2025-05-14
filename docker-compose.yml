@@ -1,25 +1,32 @@
+version: '3.8'
+
 services:
   api:
     build:
       context: .
       dockerfile: API/Dockerfile
+      args:
+        - CAAS_API_KEY=${CAT_API_KEY}
     ports:
-      - "5197:8081"  # Host:Container
-    depends_on:
-      - db
+      - "${API_PORT}:8081"
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
-      - ASPNETCORE_URLS=http://+:8081
-      - ConnectionStrings__SqlConnectionString=Server=db;Database=StealCatsDb;User=sa;Password=Your_password123;Encrypt=False;
-
+      - DB_HOST=db
+      - DB_PORT=1433
+      - DB_NAME=${DB_NAME}
+      - DB_USER=${DB_USER}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - CAT_API_KEY=${CAT_API_KEY}
+    depends_on:
+      - db
 
   db:
     image: mcr.microsoft.com/mssql/server:2022-latest
-    ports:
-      - "1433:1433"
     environment:
-      SA_PASSWORD: "Your_password123"
-      ACCEPT_EULA: "Y"
+      - ACCEPT_EULA=Y
+      - MSSQL_SA_PASSWORD=${DB_PASSWORD}
+    ports:
+      - "${DB_PORT}:1433"
     volumes:
       - sql_data:/var/opt/mssql
 

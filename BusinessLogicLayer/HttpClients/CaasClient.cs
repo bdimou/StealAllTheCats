@@ -23,7 +23,9 @@ namespace BusinessLogicLayer.HttpClients
         public async Task<List<CaasResponse>?> FetchKitties()
         {
             // CaaS API call  
-            HttpResponseMessage response = await _httpClient.GetAsync($"images/search?limit=25&has_breeds=1&api_key={_configuration.GetSection("TheCatAPI")["APIKey"]}");
+            string? apiKey = Environment.GetEnvironmentVariable("CAT_API_KEY");
+
+            HttpResponseMessage response = await _httpClient.GetAsync($"images/search?limit=25&has_breeds=1&api_key={apiKey}");
 
             // Check if the response is successful  
             if (!response.IsSuccessStatusCode)

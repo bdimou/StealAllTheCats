@@ -15,7 +15,6 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddDataAccessLayer(builder.Configuration);
 builder.Services.AddBusinessLogicLayer(builder.Configuration);
 
-
 // InMemory Cache
 builder.Services.AddMemoryCache();
 
@@ -42,21 +41,12 @@ builder.Services.AddSwaggerGen(options =>
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
-if (app.Environment.IsDevelopment())
-{
-    app.UseSwagger();
-    app.UseSwaggerUI();
-}
-
 app.UseExceptionHandlingMiddleware();
 app.UseRouting();
-
 
 //Swagger
 app.UseSwagger();
 app.UseSwaggerUI();
-
 
 app.MapCatsAPIEndpoints();
 
@@ -81,7 +71,7 @@ using (var scope = app.Services.CreateScope())
         }
     }
 }
-// Endpoint routing
+
 app.Run();
 
 public partial class Program { }

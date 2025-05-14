@@ -59,6 +59,7 @@ DB_CONTAINER_PORT=1433
 DB_NAME=StealCatsDb
 DB_USER=sa
 DB_PASSWORD=Your_secure_password_here
+CAT_API_KEY=Your_TheCatAPI_key
 ```
 
 ### Docker Compose Configuration
@@ -66,36 +67,8 @@ DB_PASSWORD=Your_secure_password_here
 The application uses Docker Compose for orchestration. The `docker-compose.yml` file is configured to use environment variables for sensitive information and port mappings. Here's how to customize the configuration:
 
 1. Create a `.env` file as described above
-2. Update the `docker-compose.yml` file to use environment variables:
+2. Place it in solution root
 
-```yaml
-services:
-  api:
-    build:
-      context: .
-      dockerfile: API/Dockerfile
-    ports:
-      - "${API_PORT}:${API_CONTAINER_PORT}"
-    depends_on:
-      - db
-    environment:
-      - ASPNETCORE_ENVIRONMENT=Development
-      - ASPNETCORE_URLS=http://+:${API_CONTAINER_PORT}
-      - ConnectionStrings__SqlConnectionString=Server=db;Database=${DB_NAME};User=${DB_USER};Password=${DB_PASSWORD};Encrypt=False;
-
-  db:
-    image: mcr.microsoft.com/mssql/server:2022-latest
-    ports:
-      - "${DB_PORT}:${DB_CONTAINER_PORT}"
-    environment:
-      SA_PASSWORD: "${DB_PASSWORD}"
-      ACCEPT_EULA: "Y"
-    volumes:
-      - sql_data:/var/opt/mssql
-
-volumes:
-  sql_data:
-```
 
 ### Running the Application
 
@@ -114,7 +87,10 @@ The application will be available at:
 ### Database Configuration
 - Database Name: Configured via DB_NAME in .env
 - SQL Server credentials are configured through environment variables
-- Data persistence is handled through Docker volumes
+- SQL Server Migrations are handled in-app
+- TheCatAPI access is configured through your API key
+- Data persistence is handled through Docker volumes (but destroying the container deletes the data)
+
 
 ## Project Structure
 
