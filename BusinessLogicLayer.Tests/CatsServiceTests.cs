@@ -212,7 +212,7 @@ namespace BusinessLogicLayer.Tests
             var result = await _catsService.FetchCatsAsync();
 
             // Assert
-            Assert.Equal(1, result);
+            Assert.Equal(1, result.UniqueCatsAdded);
             _mockCatsRepository.Verify(x => x.SaveCats(It.IsAny<List<Cat>>()), Times.Once);
         }
 
@@ -425,7 +425,7 @@ namespace BusinessLogicLayer.Tests
             var result = await _catsService.FetchCatsAsync();
 
             // Assert
-            Assert.Equal(0, result);
+            Assert.Equal(0, result.UniqueCatsAdded);
             _mockCatsRepository.Verify(x => x.SaveCats(It.IsAny<List<Cat>>()), Times.Once);
         }
     }

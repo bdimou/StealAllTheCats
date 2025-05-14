@@ -8,11 +8,6 @@ using Microsoft.Extensions.Configuration;
 
 namespace BusinessLogicLayer.HttpClients
 {
-    public interface ICaasClient
-    {
-        Task<List<CaasResponse>?> FetchKitties();
-        Task<byte[]?> DownloadImageAsync(string url);
-    }
 
     public class CaasClient : ICaasClient
     {

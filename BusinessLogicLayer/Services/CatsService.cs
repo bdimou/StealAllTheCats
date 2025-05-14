@@ -47,7 +47,7 @@ namespace BusinessLogicLayer.Services
             _cache = cache;
         }
 
-        public async Task<int> FetchCatsAsync()
+        public async Task<FetchCatsResponse> FetchCatsAsync()
         {
             _logger.LogInformation("Fetching cats from CaaS API...");
             // Call the CaasClient to fetch them kitties
@@ -125,8 +125,11 @@ namespace BusinessLogicLayer.Services
             // Save kitty to the database, care for distinct photos
             var distinctPhotos = await _CatsRepository.SaveCats(cats);
 
-            return distinctPhotos;
-
+            return new FetchCatsResponse 
+            { 
+                Message = "Cats were successfully fetched from TheCatAPI",
+                UniqueCatsAdded = distinctPhotos
+            };
         }
 
         public async Task<PaginatedList<CatResponse>> GetCatsPaginated(string page, string pageSize)

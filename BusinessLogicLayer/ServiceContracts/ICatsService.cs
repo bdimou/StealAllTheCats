@@ -13,7 +13,7 @@ namespace BusinessLogicLayer.ServiceContracts
         /// Fetches a list of cats from an external API and saves them to the database.
         /// </summary>
         /// <returns>A task representing the asynchronous operation.</returns>
-        Task<int> FetchCatsAsync();
+        Task<FetchCatsResponse> FetchCatsAsync();
         /// <summary>
         /// Gets a paginated list of cats from the database.
         /// </summary>

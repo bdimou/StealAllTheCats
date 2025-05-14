@@ -6,6 +6,8 @@ using DataAccessLayer.Context;
 using FluentValidation.AspNetCore;
 using Microsoft.EntityFrameworkCore;
 using System;
+using Microsoft.OpenApi.Models;
+using System.Reflection;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -23,7 +25,20 @@ builder.Services.AddFluentValidationAutoValidation();
 // Endpoint routing
 builder.Services.AddEndpointsApiExplorer();
 
-builder.Services.AddSwaggerGen();
+builder.Services.AddSwaggerGen(options =>
+{
+    options.SwaggerDoc("v1", new OpenApiInfo
+    {
+        Title = "StealAllTheCats API",
+        Version = "v1",
+        Description = "API for managing cat images and tags"
+    });
+
+    // Set the comments path for the Swagger JSON and UI
+    var xmlFile = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
+    var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
+    options.IncludeXmlComments(xmlPath);
+});
 
 var app = builder.Build();
 
