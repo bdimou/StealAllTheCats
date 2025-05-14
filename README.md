@@ -6,10 +6,12 @@ A .NET 8 web application that integrates with TheCatAPI to manage and display ca
 
 The application follows Clean Architecture principles with the following key components:
 
-- **API Layer**: Minimal API endpoints for efficient request handling
-- **Application Layer**: Business logic and service implementations
-- **Domain Layer**: Core entities and business rules
-- **Infrastructure Layer**: Data access and external service integrations
+- **API Layer**: Minimal API endpoints for efficient request handling  
+- **Business Logic Layer**: Business logic and service implementations  
+ - ***Business Logic Layer Tests***: Unit tests for the specific layer  
+- **Data Access Layer**: Data access and external service integrations  
+ - ***Data Access Layer Tests***: Unit tests for the specific layer  
+- **Root files**: .env & docker-compose.yml
 
 ## Technical Stack
 
@@ -77,12 +79,17 @@ The application uses Docker Compose for orchestration. The `docker-compose.yml` 
 3. Navigate to the project directory
 4. Run the following command:
 ```bash
-docker-compose up
+docker-compose up --build
 ```
 
 The application will be available at:
 - API: http://localhost:${API_PORT}
 - SQL Server: localhost:${DB_PORT}
+
+5. Should something go wrong, use the command below to remove the container and try again:
+```bash
+docker-compose down -v
+```
 
 ### Database Configuration
 - Database Name: Configured via DB_NAME in .env
